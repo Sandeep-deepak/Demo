@@ -13,11 +13,10 @@ public interface DistributorProfileRepo extends JpaRepository<DistributorProfile
 
     Optional<DistributorProfile> deleteByMobileNumber(String mobileNumber);
 
-    // Filter StaffProfiles using Active/inActive Status and return List of StaffProfiles
+    // Filter Distributor Profiles using Active/inActive Status and return List of Distributor Profiles
     public List<DistributorProfile> getDistributorProfileByActive(boolean active);
 
     public List<DistributorProfile> getDistributorProfileByDeleted(boolean deleted);
 
     public List<DistributorProfile> findByActiveAndDeleted(Boolean active, Boolean deleted);
-
 }

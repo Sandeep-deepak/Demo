@@ -1,15 +1,10 @@
-package com.supreme.services;
+package com.supreme.serviceImpl;
 
-import com.supreme.entity.DistributorProfile;
-import com.supreme.entity.ERole;
-import com.supreme.entity.ProductsNewQty;
-import com.supreme.entity.User;
+import com.supreme.entity.*;
 import com.supreme.payload.request.DistributorProfileModel;
 import com.supreme.payload.response.*;
-import com.supreme.repository.DistributorProfileRepo;
-import com.supreme.repository.ProductRepo;
-import com.supreme.repository.ProductsNewQtyRepo;
-import com.supreme.repository.UserRepository;
+import com.supreme.repository.*;
+import com.supreme.service.DistributorProfileService;
 import com.supreme.utility.ProfileUtility;
 import com.supreme.utility.S3Util;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,19 +22,18 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class DistributorProfileService {
+public class DistributorProfileServiceImpl implements DistributorProfileService {
 
     private final ProfileUtility profileUtility;
     private final S3Util s3Util;
     private final UserRepository userRepository;
     private final DistributorProfileRepo distributorProfileRepo;
     private final ProductRepo productRepo;
+    private final DistributorProductQtyRepo distributorProductQtyRepo;
     private final ProductsNewQtyRepo productsNewQtyRepo;
     //    private final AppFeaturesRepo appFeaturesRepo;
     private final Response response;
     private final ErrorResponse errorResponse;
-    private final DistributorProfileRespo distributorProfResponse;
-    private final ProductService productService;
     private final PasswordEncoder encoder;
     @Value("${s3.distributorProfilePic}")
     private String s3FolderName;
@@ -49,21 +43,21 @@ public class DistributorProfileService {
     private String executivePath;
 
     @Autowired
-    public DistributorProfileService(ProfileUtility profileUtility, S3Util s3Util, UserRepository userRepository, DistributorProfileRepo distributorProfileRepo, ProductRepo productRepo, ProductsNewQtyRepo productsNewQtyRepo, Response response, ErrorResponse errorResponse, DistributorProfileRespo distributorProfResponse, ProductService productService, PasswordEncoder encoder) {
+    public DistributorProfileServiceImpl(ProfileUtility profileUtility, S3Util s3Util, UserRepository userRepository, DistributorProfileRepo distributorProfileRepo, ProductRepo productRepo, DistributorProductQtyRepo distributorProductQtyRepo, ProductsNewQtyRepo productsNewQtyRepo, Response response, ErrorResponse errorResponse, PasswordEncoder encoder) {
         this.profileUtility = profileUtility;
         this.s3Util = s3Util;
         this.userRepository = userRepository;
         this.distributorProfileRepo = distributorProfileRepo;
         this.productRepo = productRepo;
+        this.distributorProductQtyRepo = distributorProductQtyRepo;
         this.productsNewQtyRepo = productsNewQtyRepo;
         this.response = response;
         this.errorResponse = errorResponse;
-        this.distributorProfResponse = distributorProfResponse;
-        this.productService = productService;
         this.encoder = encoder;
     }
 
-    // Creating Distributor Profile
+    // Create Distributor Profile
+    @Override
     public ResponseEntity<?> addDistributorProfile(DistributorProfileModel profileRequest) {
         Optional<User> userOptional = userRepository.findByMobileNumber(profileRequest.getMobileNumber());
 //        Optional<AppFeatures> appFeatures = appFeaturesRepo.findById(1L);
@@ -92,19 +86,25 @@ public class DistributorProfileService {
                 downloadUrl = profileUtility.generateDownloadUrl(distributorPath, profileRequest.getMobileNumber());
             }
 
-            List<ProductDTO> productsDtoList = profileUtility.mapProductsToDTOs(productService.getProductsList(), 0, 0, 0, 0, 0);
-            String jsonString = profileUtility.convertListToJsonString(productsDtoList);
-            profile.setProductsJson(jsonString);
-
             user.setDistributorProfile(profile);
             userRepository.save(user);
+
+            List<DistributorProductQuantity> distributorProductQuantities = new ArrayList<>();
+            for (Product product : productRepo.findAll()) {
+                DistributorProductQuantity distributorProductQuantity = new DistributorProductQuantity();
+                distributorProductQuantity.setDistributorProfile(profile);
+                distributorProductQuantity.setProduct(product);
+                distributorProductQuantity.setCurrentQty(0);
+                distributorProductQuantities.add(distributorProductQuantity);
+            }
+            distributorProductQtyRepo.saveAll(distributorProductQuantities);
+
+            profile.setDistributorProductQuantities(distributorProductQuantities);
+
             profile.setUser(user);
             distributorProfileRepo.save(profile);
 
-            productsDtoList.stream().filter(productDTO -> productDTO.getProductImgName() != null && productDTO.getProductImgUrl() != null)
-                    .forEach(productDTO -> productDTO.setProductImgUrl(profileUtility.generateDownloadUrl("/admin/product/download/", productDTO.getProductName())));
-
-            DistributorProfileRespo distributorProfile = profileUtility.mapDistributorProfileDB(profile, productsDtoList, downloadUrl);
+            DistributorProfileRespo distributorProfile = profileUtility.mapDistributorProfile(profile, downloadUrl);
             response.setStatusCode(HttpStatus.CREATED.value());
             response.setStatus(1);
             response.setMessageCode("MSG1");
@@ -117,6 +117,8 @@ public class DistributorProfileService {
         }
     }
 
+    // Update Distributor Profile
+    @Override
     public ResponseEntity<?> updateDistributorProfile(String phNo, DistributorProfileModel profileRequest) {
         Optional<User> userOptional = userRepository.findByMobileNumber(phNo);
 //        Optional<AppFeatures> appFeatures = appFeaturesRepo.findById(1L);
@@ -144,7 +146,6 @@ public class DistributorProfileService {
         if (profileRequest.getLastName() != null && !profileRequest.getLastName().isBlank()) {
             profile.setLastName(profileRequest.getLastName());
         }
-        // Modifying Mobile number?
         if (profileRequest.getMobileNumber() != null && !profileRequest.getMobileNumber().isBlank()) {
             profile.setMobileNumber(profileRequest.getMobileNumber());
             user.setMobileNumber(profileRequest.getMobileNumber());
@@ -174,63 +175,82 @@ public class DistributorProfileService {
             downloadUrl = profileUtility.generateDownloadUrl(distributorPath, profileRequest.getMobileNumber());
         }
 
-        List<ProductDTO> dBProductsList = profileUtility.convertJsonStringToList(profile.getProductsJson(), ProductDTO.class);
+        List<ProductsNewQty> updatedNewProducts = new ArrayList<>();
+        List<DistributorProductQuantity> updatedDBProducts = new ArrayList<>();
 
-        List<ProductDTO> updatedDBProductsList = new ArrayList<>();
-        for (ProductDTO product : dBProductsList) {
-            switch (product.getProductName()) {
+        for (DistributorProductQuantity distProductQty : distributorProductQtyRepo.findByDistributorProfileId(profile.getId())) {
+            ProductsNewQty productsNewQty = new ProductsNewQty();
+            productsNewQty.setAddedDate(LocalDateTime.now());
+            productsNewQty.setDistributorProfile(profile);
+
+            switch (distProductQty.getProduct().getProductName()) {
                 case "Pan Masala":
                     if (profileRequest.getPanMasalaQty() != null) {
-                        product.setNewQuantity(profileRequest.getPanMasalaQty());
                         // Current Qty(Total) = Current Qty + New Qty
-                        product.setCurrentQuantity(product.getCurrentQuantity() + profileRequest.getPanMasalaQty());
+                        distProductQty.setCurrentQty(distProductQty.getCurrentQty() + profileRequest.getPanMasalaQty());
+                        productsNewQty.setProduct(distProductQty.getProduct());
+                        productsNewQty.setCurrentQty(distProductQty.getCurrentQty());
+                        productsNewQty.setNewQty(profileRequest.getPanMasalaQty());
                     }
                     break;
                 case "Coriander Powder":
                     if (profileRequest.getCorianderQty() != null) {
-                        product.setNewQuantity(profileRequest.getCorianderQty());
-                        product.setCurrentQuantity(product.getCurrentQuantity() + profileRequest.getCorianderQty());
+                        distProductQty.setCurrentQty(distProductQty.getCurrentQty() + profileRequest.getCorianderQty());
+                        productsNewQty.setProduct(distProductQty.getProduct());
+                        productsNewQty.setCurrentQty(distProductQty.getCurrentQty());
+                        productsNewQty.setNewQty(profileRequest.getCorianderQty());
                     }
                     break;
                 case "Mutton Masala":
                     if (profileRequest.getMuttonMasalaQty() != null) {
-                        product.setNewQuantity(profileRequest.getMuttonMasalaQty());
-                        product.setCurrentQuantity(product.getCurrentQuantity() + profileRequest.getMuttonMasalaQty());
+                        distProductQty.setCurrentQty(distProductQty.getCurrentQty() + profileRequest.getMuttonMasalaQty());
+                        productsNewQty.setProduct(distProductQty.getProduct());
+                        productsNewQty.setCurrentQty(distProductQty.getCurrentQty());
+                        productsNewQty.setNewQty(profileRequest.getMuttonMasalaQty());
                     }
                     break;
                 case "Chicken Masala":
                     if (profileRequest.getChickenMasalaQty() != null) {
-                        product.setNewQuantity(profileRequest.getChickenMasalaQty());
-                        product.setCurrentQuantity(product.getCurrentQuantity() + profileRequest.getChickenMasalaQty());
+                        distProductQty.setCurrentQty(distProductQty.getCurrentQty() + profileRequest.getChickenMasalaQty());
+                        productsNewQty.setProduct(distProductQty.getProduct());
+                        productsNewQty.setCurrentQty(distProductQty.getCurrentQty());
+                        productsNewQty.setNewQty(profileRequest.getChickenMasalaQty());
                     }
                     break;
                 case "Chilli Powder":
                     if (profileRequest.getChilliPowderQty() != null) {
-                        product.setNewQuantity(profileRequest.getChilliPowderQty());
-                        product.setCurrentQuantity(product.getCurrentQuantity() + profileRequest.getChilliPowderQty());
+                        distProductQty.setCurrentQty(distProductQty.getCurrentQty() + profileRequest.getChilliPowderQty());
+                        productsNewQty.setProduct(distProductQty.getProduct());
+                        productsNewQty.setCurrentQty(distProductQty.getCurrentQty());
+                        productsNewQty.setNewQty(profileRequest.getChilliPowderQty());
                     }
                     break;
                 default:
-                    // Default behavior if product name doesn't match any condition
                     break;
             }
-            updatedDBProductsList.add(product);
+            updatedDBProducts.add(distProductQty);
+            updatedNewProducts.add(productsNewQty);
         }
 
-        String jsonString = profileUtility.convertListToJsonString(updatedDBProductsList);
-        profile.setProductsJson(jsonString);
+        /*
+        List<ProductDTO> updatedDBProductsList = new ArrayList<>();
+        for (DistributorProductQuantity product : updatedDBProducts){
+            ProductDTO productDTO = new ProductDTO();
+            productDTO.setProductId(product.getId());
+            productDTO.setProductName(product.getProduct().getProductName());
+            productDTO.setProductImgName(product.getProduct().getProductImgName());
+            productDTO.setProductImgUrl(ServletUriComponentsBuilder.fromCurrentContextPath().path(product.getProduct().getProductImgUrl()).toUriString());
+            productDTO.setCurrentQuantity(product.getCurrentQty());
+            updatedDBProductsList.add(productDTO);
+        }
+         */
 
-        updatedDBProductsList.stream().filter(productDTO -> productDTO.getProductImgName() != null && productDTO.getProductImgUrl() != null)
-                .forEach(productDTO -> productDTO.setProductImgUrl(profileUtility.generateDownloadUrl("/admin/product/download/", productDTO.getProductName())));
-
-        ProductsNewQty productsNewQty = new ProductsNewQty();
-        productsNewQty.setAddedDate(LocalDateTime.now());
-        productsNewQty.setDistributorProfile(profile);
-        productsNewQty.setProductsJson(profile.getProductsJson());
+        List<ProductDTO> updatedDBProductsList = profileUtility.mapDistributorProductQuantityToProductDTO(updatedDBProducts);
 
         userRepository.save(user);
         distributorProfileRepo.save(profile);
-        productsNewQtyRepo.save(productsNewQty);
+        distributorProductQtyRepo.saveAll(updatedDBProducts);
+        productsNewQtyRepo.saveAll(updatedNewProducts);
 
         DistributorProfileRespo distributorProfile = profileUtility.mapDistributorProfileDB(profile, updatedDBProductsList, downloadUrl);
         response.setStatusCode(HttpStatus.CREATED.value());
@@ -241,7 +261,8 @@ public class DistributorProfileService {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    // Fetch all executive profiles under distributor
+    // Fetch List of Executives corresponding to Distributor
+    @Override
     public ResponseEntity<?> getExecutives(Long distributorId) {
         Optional<DistributorProfile> distributorOptional = distributorProfileRepo.findById(distributorId);
         if (distributorOptional.isEmpty()) {
@@ -258,6 +279,8 @@ public class DistributorProfileService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    // Fetch Distributor Profile by status
+    @Override
     public ResponseEntity<?> getDistributorProfilesByStatus(Boolean active, Boolean deleted) {
         // Fetch all profiles when active and deleted parameters are not passed
         if (active == null && deleted == null) {
@@ -292,7 +315,6 @@ public class DistributorProfileService {
         }
 
         List<DistributorProfileRespo> distributorProfileRespoList = profileUtility.mapDistributorProfiles(filteredProfiles, distributorPath);
-
         response.setStatusCode(HttpStatus.OK.value());
         response.setStatus(1);
         response.setMessageCode("MSG16");
@@ -302,6 +324,8 @@ public class DistributorProfileService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    // Fetch Distributor Profile Image
+    @Override
     public ResponseEntity<?> getDistributorProfile(String phNo) {
         Optional<User> userOptional = userRepository.findByMobileNumber(phNo);
         if (userOptional.isEmpty()) {
@@ -326,7 +350,8 @@ public class DistributorProfileService {
         }
     }
 
-    // Delete Profile (setting profile field active as false and deleted as true)
+    // Delete Distributor Profile (set profile field active as false and deleted as true)
+    @Override
     public ResponseEntity<?> deleteDistributorProfile(String phNo) {
         Optional<User> user = userRepository.findByMobileNumber(phNo);
         Optional<DistributorProfile> distributorProfileOptional = distributorProfileRepo.findByMobileNumber(phNo);
@@ -360,6 +385,8 @@ public class DistributorProfileService {
         }
     }
 
+    // Fetch Distributor Profile Image
+    @Override
     public ResponseEntity<?> getDistributorProfilePic(String phNo) throws IOException {
         String message = "";
         Optional<DistributorProfile> distributorProfileOptional = distributorProfileRepo.findByMobileNumber(phNo);
@@ -379,6 +406,5 @@ public class DistributorProfileService {
                     .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, message, "MSG25"));
         }
     }
-
 
 }

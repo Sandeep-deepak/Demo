@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 @NoArgsConstructor
 @Component
 public class ExecutiveProfileResponse {
+
     private Long distributorId;
     private String distributorName;
     private Long executiveId;

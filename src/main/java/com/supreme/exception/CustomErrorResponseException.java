@@ -10,7 +10,7 @@ import org.springframework.http.HttpStatusCode;
 @NoArgsConstructor
 @ToString
 public class CustomErrorResponseException extends RuntimeException {
-	private HttpStatusCode statusCode;
+    private HttpStatusCode statusCode;
     private int status;
     private String message;
     private String messageCode;

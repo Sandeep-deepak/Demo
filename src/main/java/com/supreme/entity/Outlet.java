@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@AllArgsConstructor
+//@AllArgsConstructor
 @NoArgsConstructor
 @Entity
 @Table(name = "outlets")
@@ -25,9 +25,9 @@ public class Outlet {
     @Column(name = "outletImgUri")
     private String outletImgUrl;
 
-    @OneToMany(mappedBy = "outlet", cascade = CascadeType.ALL)
-    @JsonIgnore // Ignore serialization of the author field to prevent infinite recursion
-    private List<Order> orders = new ArrayList<>();
+//    @OneToMany(mappedBy = "outlet", cascade = CascadeType.ALL)
+//    @JsonIgnore
+//    private List<Order> orders = new ArrayList<>();
 
     public Outlet(Long outletId, String outletName, String mobileNumber, String outletAddress, String outletImgName, String outletImgUrl) {
         this.outletId = outletId;

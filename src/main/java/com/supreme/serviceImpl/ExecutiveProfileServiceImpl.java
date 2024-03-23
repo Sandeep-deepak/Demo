@@ -1,4 +1,4 @@
-package com.supreme.services;
+package com.supreme.serviceImpl;
 
 import com.supreme.entity.DistributorProfile;
 import com.supreme.entity.ERole;
@@ -11,6 +11,7 @@ import com.supreme.payload.response.Response;
 import com.supreme.repository.DistributorProfileRepo;
 import com.supreme.repository.ExecutiveProfileRepo;
 import com.supreme.repository.UserRepository;
+import com.supreme.service.ExecutiveProfileService;
 import com.supreme.utility.ProfileUtility;
 import com.supreme.utility.S3Util;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class ExecutiveProfileService {
+public class ExecutiveProfileServiceImpl implements ExecutiveProfileService {
 
     private final ProfileUtility profileUtility;
     private final S3Util s3Util;
@@ -44,7 +45,7 @@ public class ExecutiveProfileService {
     private String executivePath;
 
     @Autowired
-    public ExecutiveProfileService(ProfileUtility profileUtility, S3Util s3Util, UserRepository userRepository, ExecutiveProfileRepo executiveProfileRepo, DistributorProfileRepo distributorProfileRepo, Response response, ErrorResponse errorResponse, PasswordEncoder encoder) {
+    public ExecutiveProfileServiceImpl(ProfileUtility profileUtility, S3Util s3Util, UserRepository userRepository, ExecutiveProfileRepo executiveProfileRepo, DistributorProfileRepo distributorProfileRepo, Response response, ErrorResponse errorResponse, PasswordEncoder encoder) {
         this.profileUtility = profileUtility;
         this.s3Util = s3Util;
         this.userRepository = userRepository;
@@ -55,7 +56,8 @@ public class ExecutiveProfileService {
         this.encoder = encoder;
     }
 
-    // Creating Executive Profile
+    // Create Executive Profile
+    @Override
     public ResponseEntity<?> addExecutiveProfile(ExecutiveProfileModel profileRequest) {
 //        Optional<AppFeatures> appFeatures = appFeaturesRepo.findById(1L);
         Optional<User> userOptional = userRepository.findByMobileNumber(profileRequest.getMobileNumber());
@@ -92,14 +94,12 @@ public class ExecutiveProfileService {
                 downloadUrl = profileUtility.generateDownloadUrl(executivePath, profileRequest.getMobileNumber());
             }
 
-
             user.setExecutiveProfile(profile);
             userRepository.save(user);
             profile.setUser(user);
             executiveProfileRepo.save(profile);
 
             ExecutiveProfileResponse executiveProfile = profileUtility.mapExecutiveProfile(profile, downloadUrl);
-
             response.setStatusCode(HttpStatus.CREATED.value());
             response.setStatus(1);
             response.setMessageCode("MSG1");
@@ -112,6 +112,8 @@ public class ExecutiveProfileService {
         }
     }
 
+    // Update Executive Profile
+    @Override
     public ResponseEntity<?> updateExecutiveProfile(String phNo, ExecutiveProfileModel profileRequest) {
         Optional<User> userOptional = userRepository.findByMobileNumber(phNo);
 //        Optional<AppFeatures> appFeatures = appFeaturesRepo.findById(1L);
@@ -139,7 +141,6 @@ public class ExecutiveProfileService {
         if (profileRequest.getLastName() != null && !profileRequest.getLastName().isBlank()) {
             profile.setLastName(profileRequest.getLastName());
         }
-
         if (profileRequest.getMobileNumber() != null && !profileRequest.getMobileNumber().isBlank()) {
             profile.setMobileNumber(profileRequest.getMobileNumber());
             user.setMobileNumber(profileRequest.getMobileNumber());
@@ -153,7 +154,6 @@ public class ExecutiveProfileService {
 
         profile.setDeleted(false);
 
-//        String downloadUrl = null;
         String downloadUri = executivePath + profileRequest.getMobileNumber();
         String downloadUrl = profileUtility.generateDownloadUrl(executivePath, profile.getMobileNumber(), profile.getProfilePicName(), profile.getProfilePicUrl());
 
@@ -175,7 +175,6 @@ public class ExecutiveProfileService {
         executiveProfileRepo.save(profile);
 
         ExecutiveProfileResponse executiveProfile = profileUtility.mapExecutiveProfile(profile, downloadUrl);
-
         response.setStatusCode(HttpStatus.CREATED.value());
         response.setStatus(1);
         response.setMessageCode("MSG1");
@@ -184,6 +183,8 @@ public class ExecutiveProfileService {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    // Fetch Executive Profile by status
+    @Override
     public ResponseEntity<?> getExecutiveProfilesByStatus(Boolean active, Boolean deleted) {
         // Fetch all profiles when active and deleted parameters are not passed
         if (active == null && deleted == null) {
@@ -220,16 +221,16 @@ public class ExecutiveProfileService {
         }
 
         List<ExecutiveProfileResponse> executiveProfileResponseList = profileUtility.mapExecutiveProfiles(filteredProfiles, executivePath);
-
         response.setStatusCode(HttpStatus.OK.value());
         response.setStatus(1);
         response.setMessageCode("MSG16");
         response.setMessage(message);
         response.setResult(executiveProfileResponseList);
-
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    // Fetch Executive Profile by mobile number
+    @Override
     public ResponseEntity<?> getExecutiveProfile(String phNo) {
         Optional<User> userOptional = userRepository.findByMobileNumber(phNo);
         if (userOptional.isEmpty()) {
@@ -255,7 +256,8 @@ public class ExecutiveProfileService {
         }
     }
 
-    // Delete Profile (setting profile field active as false and deleted as true)
+    // Delete Profile (set profile field active as false and deleted as true)
+    @Override
     public ResponseEntity<?> deleteExecutiveProfile(String phNo) {
         Optional<User> user = userRepository.findByMobileNumber(phNo);
         Optional<ExecutiveProfile> executiveProfileOptional = executiveProfileRepo.findByMobileNumber(phNo);
@@ -289,6 +291,8 @@ public class ExecutiveProfileService {
         }
     }
 
+    // Fetch Executive Profile Image
+    @Override
     public ResponseEntity<?> getExecutiveProfilePic(String phNo) throws IOException {
         String message = "";
         Optional<ExecutiveProfile> executiveProfileOptional = executiveProfileRepo.findByMobileNumber(phNo);
@@ -308,4 +312,5 @@ public class ExecutiveProfileService {
                     .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, message, "MSG25"));
         }
     }
+
 }

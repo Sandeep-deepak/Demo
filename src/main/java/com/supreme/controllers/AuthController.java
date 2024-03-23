@@ -7,7 +7,7 @@ import com.supreme.payload.response.JwtResponse;
 import com.supreme.payload.response.Response;
 import com.supreme.repository.UserRepository;
 import com.supreme.security.jwt.JwtUtils;
-import com.supreme.services.UserDetailsImpl;
+import com.supreme.serviceImpl.UserDetailsImpl;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

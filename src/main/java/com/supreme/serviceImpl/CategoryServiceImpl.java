@@ -1,13 +1,12 @@
-package com.supreme.services;
+package com.supreme.serviceImpl;
 
-import com.supreme.entity.AppFeatures;
 import com.supreme.entity.Category;
 import com.supreme.payload.response.CategoryResponse;
 import com.supreme.payload.response.ErrorResponse;
 import com.supreme.payload.response.Response;
 import com.supreme.repository.AppFeaturesRepo;
 import com.supreme.repository.CategoryRepo;
-import com.supreme.repository.ProductRepo;
+import com.supreme.service.CategoryService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,7 +18,7 @@ import java.util.Optional;
 
 @Service
 @Transactional
-public class CategoryService {
+public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryResponse categoryResponse;
     private final AppFeaturesRepo appFeaturesRepo;
@@ -28,7 +27,7 @@ public class CategoryService {
     private final ErrorResponse errorResponse;
 
     @Autowired
-    public CategoryService(CategoryResponse categoryResponse, AppFeaturesRepo appFeaturesRepo, CategoryRepo categoryRepo, Response response, ErrorResponse errorResponse) {
+    public CategoryServiceImpl(CategoryResponse categoryResponse, AppFeaturesRepo appFeaturesRepo, CategoryRepo categoryRepo, Response response, ErrorResponse errorResponse) {
         this.categoryResponse = categoryResponse;
         this.appFeaturesRepo = appFeaturesRepo;
         this.categoryRepo = categoryRepo;
@@ -36,7 +35,8 @@ public class CategoryService {
         this.errorResponse = errorResponse;
     }
 
-    // Add Category
+    // Create Category
+    @Override
     public ResponseEntity<?> addCategory(String categoryName) {
         if (Boolean.TRUE.equals(categoryRepo.existsByCategoryName(categoryName))) {
             errorResponse.setStatusCode(HttpStatus.BAD_REQUEST.value());
@@ -65,6 +65,7 @@ public class CategoryService {
     }
 
     // Fetch Category Details
+    @Override
     public ResponseEntity<?> getCategoryDetails(long categoryId) {
         Optional<Category> categoryOpt = categoryRepo.findById(categoryId);
         if (categoryOpt.isEmpty()) {
@@ -87,6 +88,7 @@ public class CategoryService {
     }
 
     // Fetch List of categories
+    @Override
     public ResponseEntity<?> getCategories() {
         List<Category> categoriesList = categoryRepo.findAll();
         List<CategoryResponse> updatedCategoryList = categoriesList.stream()
@@ -107,6 +109,7 @@ public class CategoryService {
     }
 
     // Update Category Details
+    @Override
     public ResponseEntity<?> updateCategory(long categoryId, String categoryName) {
         Optional<Category> categoryOpt = categoryRepo.findById(categoryId);
         if (categoryOpt.isEmpty()) {
@@ -138,20 +141,13 @@ public class CategoryService {
     }
 
     // Delete Category
+    @Override
     public ResponseEntity<?> delCategory(long categoryId) {
         // Check if Category exists
         Optional<Category> categoryOpt = categoryRepo.findById(categoryId);
         if (categoryOpt.isEmpty()) {
             return ResponseEntity.badRequest().body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), 0, "Category doesn't exist", "MSG33"));
         }
-        Category category = categoryOpt.get();
-
-        // Check if AppFeatures exists
-        Optional<AppFeatures> appFeaturesOptional = appFeaturesRepo.findById(1L);
-        if (appFeaturesOptional.isEmpty()) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), 0, "App Features doesn't exist", "MSG33"));
-        }
-        AppFeatures appFeatures = appFeaturesOptional.get();
 
         categoryRepo.deleteById(categoryId);
 
@@ -162,4 +158,5 @@ public class CategoryService {
         response.setResult(null);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
 }

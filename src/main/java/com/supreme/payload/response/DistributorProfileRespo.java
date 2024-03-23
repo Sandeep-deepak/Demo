@@ -13,6 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @Component
 public class DistributorProfileRespo {
+
     private Long distributorId;
     private String firstName;
     private String lastName;

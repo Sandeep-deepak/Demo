@@ -1,7 +1,7 @@
 package com.supreme.controllers;
 
 import com.supreme.payload.request.ExecutiveProfileModel;
-import com.supreme.services.ExecutiveProfileService;
+import com.supreme.serviceImpl.ExecutiveProfileServiceImpl;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -13,46 +13,50 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/executive")
 public class ExecutiveProfileController {
-    private final ExecutiveProfileService executiveProfileService;
+
+    private final ExecutiveProfileServiceImpl executiveProfileServiceImpl;
 
     @Autowired
-    public ExecutiveProfileController(ExecutiveProfileService executiveProfileService) {
-        this.executiveProfileService = executiveProfileService;
+    public ExecutiveProfileController(ExecutiveProfileServiceImpl executiveProfileServiceImpl) {
+        this.executiveProfileServiceImpl = executiveProfileServiceImpl;
     }
 
-    // Creating Executive Profile
+    // Create Executive Profile
     @PostMapping(path = "/addProfile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> addExecutiveProfile(@ModelAttribute @Valid ExecutiveProfileModel profileRequest) throws IOException {
-        return executiveProfileService.addExecutiveProfile(profileRequest);
+        return executiveProfileServiceImpl.addExecutiveProfile(profileRequest);
     }
 
-    // Updating Executive Profile
-    @PutMapping(path = "/updateProfile/{phNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> updateExecutiveProfile(@PathVariable String phNo, @ModelAttribute ExecutiveProfileModel profileRequest) {
-        return executiveProfileService.updateExecutiveProfile(phNo, profileRequest);
-    }
-
+    // Fetch Executive Profile by mobile number
     @GetMapping("/getProfile/{phNo}")
     public ResponseEntity<?> getExecutiveProfile(@PathVariable String phNo) {
-        return executiveProfileService.getExecutiveProfile(phNo);
+        return executiveProfileServiceImpl.getExecutiveProfile(phNo);
     }
 
-    @GetMapping("/profilesByStatus")
-    public ResponseEntity<?> getExecutiveProfilesByStatus(@RequestParam(required = false) Boolean active, @RequestParam(required = false) Boolean deleted) {
-        return executiveProfileService.getExecutiveProfilesByStatus(active, deleted);
+    // Update Executive Profile
+    @PutMapping(path = "/updateProfile/{phNo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updateExecutiveProfile(@PathVariable String phNo, @ModelAttribute ExecutiveProfileModel profileRequest) {
+        return executiveProfileServiceImpl.updateExecutiveProfile(phNo, profileRequest);
     }
 
-    // Delete Profile (setting profile field active as false and deleted as true)
+    // Delete Executive Profile (set profile field active as false and deleted as true)
     @DeleteMapping("/deleteProfile/{phNo}")
     public ResponseEntity<?> deleteExecutiveProfile(@PathVariable String phNo) {
-        return executiveProfileService.deleteExecutiveProfile(phNo);
+        return executiveProfileServiceImpl.deleteExecutiveProfile(phNo);
     }
 
-    // Get Executive Profile Picture
+    // Fetch Executive Profile Image
     @GetMapping("/pic/download/{phNo}")
     public ResponseEntity<?> getExecutiveProfilePic(@PathVariable String phNo) throws IOException {
-        return executiveProfileService.getExecutiveProfilePic(phNo);
+        return executiveProfileServiceImpl.getExecutiveProfilePic(phNo);
     }
+
+    // Fetch Executive Profile by status
+    @GetMapping("/profilesByStatus")
+    public ResponseEntity<?> getExecutiveProfilesByStatus(@RequestParam(required = false) Boolean active, @RequestParam(required = false) Boolean deleted) {
+        return executiveProfileServiceImpl.getExecutiveProfilesByStatus(active, deleted);
+    }
+
 }
 
 

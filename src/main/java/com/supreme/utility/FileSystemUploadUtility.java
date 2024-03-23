@@ -1,6 +1,6 @@
 //package com.supreme.utility;
 //
-//import com.jtmart.exception.CustomErrorResponseException;
+//import com.supreme.exception.CustomErrorResponseException;
 //import org.springframework.http.HttpStatus;
 //import org.springframework.stereotype.Component;
 //import org.springframework.web.multipart.MultipartFile;
@@ -21,7 +21,7 @@
 //                Files.createDirectories(path);
 //            }
 //        } catch (IOException e) {
-//            throw new CustomErrorResponseException(HttpStatus.BAD_REQUEST, "Could not initialize folder for upload!", "MSG42");
+//            throw new CustomErrorResponseException(HttpStatus.BAD_REQUEST, 0, "Could not initialize folder for upload!", "MSG42");
 //        }
 //    }
 //
@@ -31,9 +31,9 @@
 //            Files.copy(file.getInputStream(), applicantPath.resolve(modifiedName));
 //        } catch (Exception e) {
 //            if (e instanceof FileAlreadyExistsException) {
-//                throw new CustomErrorResponseException(HttpStatus.FOUND, "A file of that name already exists.", "MSG22");
+//                throw new CustomErrorResponseException(HttpStatus.FOUND, 0, "A file of that name already exists.", "MSG22");
 //            }
-//            throw new CustomErrorResponseException(HttpStatus.BAD_REQUEST, e.getMessage(), "MSG56");
+//            throw new CustomErrorResponseException(HttpStatus.BAD_REQUEST, 0, e.getMessage(), "MSG56");
 //        }
 //    }
 //
@@ -49,7 +49,7 @@
 //            // JappTech_Logo_2024-02-13_180503.jpeg
 //        } else {
 ////            throw new ErrorResponse(HttpStatus.NOT_FOUND.value(), "File Not found Exception", "MSG19");
-//            throw new CustomErrorResponseException(HttpStatus.NOT_FOUND, "File doesn't exists to rename", "MSG32");
+//            throw new CustomErrorResponseException(HttpStatus.NOT_FOUND, 0, "File doesn't exists to rename", "MSG32");
 //        }
 //        return modifiedName;
 //    }

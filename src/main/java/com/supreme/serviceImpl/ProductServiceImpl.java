@@ -1,6 +1,5 @@
-package com.supreme.services;
+package com.supreme.serviceImpl;
 
-import com.supreme.entity.AppFeatures;
 import com.supreme.entity.Category;
 import com.supreme.entity.Product;
 import com.supreme.payload.request.ProductModel;
@@ -10,10 +9,12 @@ import com.supreme.payload.response.Response;
 import com.supreme.repository.AppFeaturesRepo;
 import com.supreme.repository.CategoryRepo;
 import com.supreme.repository.ProductRepo;
+import com.supreme.service.ProductService;
 import com.supreme.utility.ProfileUtility;
 import com.supreme.utility.S3Util;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -25,8 +26,7 @@ import java.util.Optional;
 
 @Service
 @Transactional
-public class ProductService {
-    private final static String S3_FOLDER_NAME = "supremeProducts/";
+public class ProductServiceImpl implements ProductService {
     private final S3Util s3Util;
     private final ProfileUtility profileUtility;
     private final CategoryRepo categoryRepo;
@@ -35,10 +35,14 @@ public class ProductService {
     private final ProductResponse productResponse;
     private final Response response;
     private final ErrorResponse errorResponse;
-    private String path = "/admin/product/download/";
+
+    @Value("${s3.product}")
+    private String s3FolderName;
+    @Value("${path.product}")
+    private String productPath;
 
     @Autowired
-    public ProductService(S3Util s3Util, ProfileUtility profileUtility, CategoryRepo categoryRepo, ProductRepo productRepo, AppFeaturesRepo appFeaturesRepo, ProductResponse productResponse, Response response, ErrorResponse errorResponse) {
+    public ProductServiceImpl(S3Util s3Util, ProfileUtility profileUtility, CategoryRepo categoryRepo, ProductRepo productRepo, AppFeaturesRepo appFeaturesRepo, ProductResponse productResponse, Response response, ErrorResponse errorResponse) {
         this.s3Util = s3Util;
         this.profileUtility = profileUtility;
         this.categoryRepo = categoryRepo;
@@ -49,13 +53,16 @@ public class ProductService {
         this.errorResponse = errorResponse;
     }
 
+    // Create Product
+    @Override
     public ResponseEntity<?> addProduct(Long categoryId, ProductModel productModel) {
-        // Check if AppFeatures exists
-        Optional<AppFeatures> appFeaturesOptional = appFeaturesRepo.findById(1L);
-        if (appFeaturesOptional.isEmpty()) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), 0, "App Features doesn't exist", "MSG33"));
-        }
-        AppFeatures appFeatures = appFeaturesOptional.get();
+//        // Check if AppFeatures exists
+//        Optional<AppFeatures> appFeaturesOptional = appFeaturesRepo.findById(1L);
+//        if (appFeaturesOptional.isEmpty()) {
+//            return ResponseEntity.badRequest().body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), 0, "App Features doesn't exist", "MSG33"));
+//        }
+//        AppFeatures appFeatures = appFeaturesOptional.get();
+
         // Check if Category exists
         Optional<Category> categoryOptional = categoryRepo.findById(categoryId);
         if (categoryOptional.isEmpty()) {
@@ -76,18 +83,15 @@ public class ProductService {
             return ResponseEntity.badRequest().body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), 0, "Please attach the Product Image", "MSG33"));
         }
 
-        // Save Product
         Product product = new Product();
         product.setProductName(productModel.getProductName());
         product.setCategory(category);
 
-        // Save image
         try {
-            // Save image file here
-            String s3Url = s3Util.uploadFile(S3_FOLDER_NAME, productModel.getProductImage());
+            String s3Url = s3Util.uploadFile(s3FolderName, productModel.getProductImage());
             String fileName = s3Url.substring(s3Url.lastIndexOf("/") + 1);
             // Storing only URI because of frequent change in URL
-            String imageDownloadUri = path + productModel.getProductName();
+            String imageDownloadUri = productPath + productModel.getProductName();
 
             product.setProductImgName(fileName);
             product.setProductImgUrl(imageDownloadUri);
@@ -100,11 +104,13 @@ public class ProductService {
         productResponse.setProductId(product.getProductId());
         productResponse.setProductName(product.getProductName());
         productResponse.setProductImgName(product.getProductImgName());
-        productResponse.setProductImgUrl(profileUtility.generateDownloadUrl(path, product.getProductName()));
+        productResponse.setProductImgUrl(profileUtility.generateDownloadUrl(productPath, product.getProductName()));
 
         return ResponseEntity.ok().body(new Response(HttpStatus.OK.value(), 1, "Product added successfully", "MSG17", productResponse));
     }
 
+    // Fetch Product details
+    @Override
     public ResponseEntity<?> getProductDetails(Long productId) {
         Optional<Product> productOptional = productRepo.findById(productId);
         if (productOptional.isPresent()) {
@@ -113,7 +119,7 @@ public class ProductService {
                 productResponse.setProductId(product.getProductId());
                 productResponse.setProductName(product.getProductName());
                 productResponse.setProductImgName(product.getProductImgName());
-                productResponse.setProductImgUrl(profileUtility.generateDownloadUrl(path, product.getProductName()));
+                productResponse.setProductImgUrl(profileUtility.generateDownloadUrl(productPath, product.getProductName()));
 
                 response.setStatusCode(HttpStatus.OK.value());
                 response.setStatus(1);
@@ -134,7 +140,8 @@ public class ProductService {
         }
     }
 
-    // Fetch List of Products using Category Id
+    // Fetch List of Products by Category id
+    @Override
     public ResponseEntity<?> getProducts(Long categoryId) {
 //        // Check if AppFeatures exists
 //        Optional<AppFeatures> appFeaturesOptional = appFeaturesRepo.findById(1L);
@@ -159,7 +166,7 @@ public class ProductService {
                     updatedProduct.setProductId(productObject.getProductId());
                     updatedProduct.setProductName(productObject.getProductName());
                     updatedProduct.setProductImgName(productObject.getProductImgName());
-                    updatedProduct.setProductImgUrl(profileUtility.generateDownloadUrl(path, productObject.getProductName()));
+                    updatedProduct.setProductImgUrl(profileUtility.generateDownloadUrl(productPath, productObject.getProductName()));
                     return updatedProduct;
                 }).toList();
 
@@ -172,26 +179,14 @@ public class ProductService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    // Fetch List of Products
+    @Override
     public List<Product> getProductsList() {
         return productRepo.findAll();
     }
 
-    public ResponseEntity<?> getProductPicByName(String productName) throws IOException {
-        Optional<Product> productOptional = productRepo.findByProductName(productName);
-        if (productOptional.isPresent()) {
-            Product product = productOptional.get();
-            if (product.getProductImgName() != null && product.getProductImgUrl() != null) {
-                return s3Util.getImageFromS3Bucket(S3_FOLDER_NAME, product.getProductImgName());
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, "Image Not Found", "MSG26"));
-            }
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, "Product Doesn't exists", "MSG11"));
-        }
-    }
-
-    // Update Product Details and image by deleting old one from file system
+    // Update Product Details and image(deletes old one from S3 bucket)
+    @Override
     public ResponseEntity<?> updateProduct(Long productId, ProductModel productModel) { // Long categoryId, Long subCategoryId,
         // Check if Product exists
         Optional<Product> productOptional = productRepo.findById(productId);
@@ -210,14 +205,13 @@ public class ProductService {
 
         if (productModel.getProductImage() != null && !productModel.getProductImage().isEmpty()) {
             if (product.getProductImgUrl() != null && product.getProductImgName() != null) {
-                s3Util.deleteFileFromS3Bucket(S3_FOLDER_NAME, product.getProductImgName());
+                s3Util.deleteFileFromS3Bucket(s3FolderName, product.getProductImgName());
                 product.setProductImgName(null);
                 product.setProductImgUrl(null);
             }
-
-            String s3Url = s3Util.uploadFile(S3_FOLDER_NAME, productModel.getProductImage());
+            String s3Url = s3Util.uploadFile(s3FolderName, productModel.getProductImage());
             String fileName = s3Url.substring(s3Url.lastIndexOf("/") + 1);
-            String imageDownloadUri = path + product.getProductImgName();
+            String imageDownloadUri = productPath + product.getProductImgName();
 
             product.setProductImgName(fileName);
             product.setProductImgUrl(imageDownloadUri);
@@ -228,7 +222,7 @@ public class ProductService {
         productResponse.setProductId(product.getProductId());
         productResponse.setProductName(product.getProductName());
         productResponse.setProductImgName(product.getProductImgName());
-        String downloadUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path(path)
+        String downloadUrl = ServletUriComponentsBuilder.fromCurrentContextPath().path(productPath)
                 .path(product.getProductName()).toUriString();
         productResponse.setProductImgUrl(downloadUrl);
 
@@ -240,13 +234,14 @@ public class ProductService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // Delete Product by Id
+    // Delete Product by id
+    @Override
     public ResponseEntity<?> deleteProduct(Long productId) {
         Optional<Product> productOptional = productRepo.findById(productId);
         if (productOptional.isPresent()) {
             Product product = productOptional.get();
             if (product.getProductImgUrl() != null && product.getProductImgName() != null) {
-                s3Util.deleteFileFromS3Bucket(S3_FOLDER_NAME, product.getProductImgName());
+                s3Util.deleteFileFromS3Bucket(s3FolderName, product.getProductImgName());
                 product.setProductImgName(null);
                 product.setProductImgUrl(null);
             } else {
@@ -270,5 +265,21 @@ public class ProductService {
         }
     }
 
+    // Download Product Image by Product name
+    @Override
+    public ResponseEntity<?> getProductPicByName(String productName) throws IOException {
+        Optional<Product> productOptional = productRepo.findByProductName(productName);
+        if (productOptional.isPresent()) {
+            Product product = productOptional.get();
+            if (product.getProductImgName() != null && product.getProductImgUrl() != null) {
+                return s3Util.getImageFromS3Bucket(s3FolderName, product.getProductImgName());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, "Image Not Found", "MSG26"));
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, "Product Doesn't exists", "MSG11"));
+        }
+    }
 
 }

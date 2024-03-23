@@ -20,5 +20,4 @@ public interface ExecutiveProfileRepo extends JpaRepository<ExecutiveProfile, Lo
     public List<ExecutiveProfile> getExecutiveProfileByDeleted(boolean deleted);
 
     public List<ExecutiveProfile> findByActiveAndDeleted(Boolean active, Boolean deleted);
-
 }

@@ -2,13 +2,15 @@ package com.supreme.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-@Data
+//@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
@@ -20,8 +22,11 @@ public class Order {
 
     private LocalDateTime dateOfOrder;
 
-    @Column(columnDefinition = "json")
-    private String productsJson;
+//    @Column(columnDefinition = "json")
+//    private String productsJson;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    private List<OrderItem> orderItems = new ArrayList<>();
 
     private String orderImgName;
     @Column(name = "orderImgUri")

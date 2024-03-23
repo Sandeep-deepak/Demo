@@ -17,52 +17,56 @@ import java.util.List;
 @Entity
 @Table(name = "executiveProfile")
 public class ExecutiveProfile {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "executive_id")
-	private Long id; //executiveId
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "executive_id")
+    private Long id; //executiveId
 
-	private String firstName;
+    private String firstName;
 
-	private String lastName;
+    private String lastName;
 
-	@NotNull(message = "Mobile Number must not be null")
-	private String mobileNumber;
+    @NotNull(message = "Mobile Number must not be null")
+    private String mobileNumber;
 
-	@NotNull
-	private boolean active;
+    @NotNull
+    private boolean active;
 
-	private boolean deleted;
+    private boolean deleted;
 
-	private String profilePicName;
+    private String profilePicName;
 
-	@Column(name = "profilePicUri")
-	private String profilePicUrl;
+    @Column(name = "profilePicUri")
+    private String profilePicUrl;
 
 
-	@OneToOne(mappedBy = "executiveProfile")
-	@JsonIgnore
-	private User user;
+    @OneToOne(mappedBy = "executiveProfile")
+    @JsonIgnore
+    private User user;
 
-	@ManyToOne
-	@JoinColumn(name = "distributor_id", nullable = false)
-	@JsonIgnore // Ignore serialization of the author field to prevent infinite recursion
-	private DistributorProfile distributorProfile;
+    @ManyToOne
+    @JoinColumn(name = "distributor_id", nullable = false)
+    @JsonIgnore // Ignore serialization of the author field to prevent infinite recursion
+    private DistributorProfile distributorProfile;
 
-	@OneToMany(mappedBy = "executiveProfile", cascade = CascadeType.ALL)
-	@JsonIgnore
-	private List<Order> orders = new ArrayList<>();
+//	@OneToMany(mappedBy = "executiveProfile", cascade = CascadeType.ALL)
+//	@JsonIgnore
+//	private List<Order> orders = new ArrayList<>();
 
-	public ExecutiveProfile(Long id, String firstName, String lastName, String mobileNumber, boolean active, boolean deleted, String profilePicName, String profilePicUrl, DistributorProfile distributorProfile) {
-		this.id = id;
-		this.firstName = firstName;
-		this.lastName = lastName;
-		this.mobileNumber = mobileNumber;
-		this.active = active;
-		this.deleted = deleted;
-		this.profilePicName = profilePicName;
-		this.profilePicUrl = profilePicUrl;
-		this.distributorProfile = distributorProfile;
-	}
+    @OneToMany(mappedBy = "executiveProfile", cascade = CascadeType.ALL)
+    @JsonIgnore // Ignore serialization of the author field to prevent infinite recursion
+    private List<Order> orders = new ArrayList<>();
+
+    public ExecutiveProfile(Long id, String firstName, String lastName, String mobileNumber, boolean active, boolean deleted, String profilePicName, String profilePicUrl, DistributorProfile distributorProfile) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.mobileNumber = mobileNumber;
+        this.active = active;
+        this.deleted = deleted;
+        this.profilePicName = profilePicName;
+        this.profilePicUrl = profilePicUrl;
+        this.distributorProfile = distributorProfile;
+    }
 
 }

@@ -8,7 +8,7 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+//@Data
 @Getter
 @Setter
 @AllArgsConstructor
@@ -38,9 +38,17 @@ public class DistributorProfile {
     @Column(name = "profilePicUri")
     private String profilePicUrl;
 
-    @Column(columnDefinition = "json")
-    private String productsJson;
+    @OneToMany(mappedBy = "distributorProfile", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<DistributorProductQuantity> distributorProductQuantities = new ArrayList<>();
+
+//    @Column(columnDefinition = "json")
+//    private String productsJson;
 //    private int panMasalaQty; private int corianderQty; private int muttonMasalaQty; private int chickenMasalaQty;
+
+    @OneToMany(mappedBy = "distributorProfile", cascade = CascadeType.ALL)
+    @JsonIgnore // Ignore serialization of the author field to prevent infinite recursion
+    private List<ProductsNewQty> productsNewQties = new ArrayList<>();
 
     @OneToOne(mappedBy = "distributorProfile")
     @JsonIgnore
@@ -56,10 +64,6 @@ public class DistributorProfile {
     @OneToMany(mappedBy = "distributorProfile", cascade = CascadeType.ALL)
     @JsonIgnore // Ignore serialization of the author field to prevent infinite recursion
     private List<Order> orders = new ArrayList<>();
-
-    @OneToMany(mappedBy = "distributorProfile", cascade = CascadeType.ALL)
-    @JsonIgnore // Ignore serialization of the author field to prevent infinite recursion
-    private List<ProductsNewQty> productsNewQties = new ArrayList<>();
 
     public DistributorProfile(Long id, String firstName, String lastName, String mobileNumber, boolean active, boolean deleted, String profilePicName, String profilePicUrl) {
         this.id = id;

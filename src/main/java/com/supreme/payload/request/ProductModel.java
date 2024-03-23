@@ -9,7 +9,6 @@ import lombok.Setter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-//@Data
 @Getter
 @Setter
 @AllArgsConstructor
