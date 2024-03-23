@@ -2,7 +2,7 @@ package com.supreme.security;
 
 import com.supreme.security.jwt.AuthEntryPointJwt;
 import com.supreme.security.jwt.AuthTokenFilter;
-import com.supreme.services.UserDetailsServiceImpl;
+import com.supreme.serviceImpl.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -76,4 +76,5 @@ public class WebSecurityConfig {
 
         return http.build();
     }
+
 }

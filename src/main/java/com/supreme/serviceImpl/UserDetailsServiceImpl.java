@@ -1,4 +1,4 @@
-package com.supreme.services;
+package com.supreme.serviceImpl;
 
 import com.supreme.entity.User;
 import com.supreme.repository.UserRepository;

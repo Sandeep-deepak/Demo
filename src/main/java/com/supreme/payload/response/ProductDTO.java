@@ -13,6 +13,4 @@ public class ProductDTO {
     private String productImgName;
     private String productImgUrl;
     private int currentQuantity;
-//    @JsonIgnore
-    private int newQuantity;
 }

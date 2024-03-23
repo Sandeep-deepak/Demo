@@ -3,7 +3,7 @@ package com.supreme.security.jwt;
 import java.security.Key;
 import java.util.Date;
 
-import com.supreme.services.UserDetailsImpl;
+import com.supreme.serviceImpl.UserDetailsImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

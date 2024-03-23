@@ -1,12 +1,12 @@
-package com.supreme.services;
+package com.supreme.serviceImpl;
 
 import com.supreme.entity.Outlet;
 import com.supreme.payload.request.OutletModel;
 import com.supreme.payload.response.ErrorResponse;
 import com.supreme.payload.response.OutletResponse;
 import com.supreme.payload.response.Response;
-import com.supreme.repository.AppFeaturesRepo;
 import com.supreme.repository.OutletRepo;
+import com.supreme.service.OutletService;
 import com.supreme.utility.ProfileUtility;
 import com.supreme.utility.S3Util;
 import jakarta.transaction.Transactional;
@@ -22,11 +22,11 @@ import java.util.Optional;
 
 @Service
 @Transactional
-public class OutletService {
+public class OutletServiceImpl implements OutletService {
     private final S3Util s3Util;
     private final ProfileUtility profileUtility;
     private final OutletRepo outletRepo;
-    private final AppFeaturesRepo appFeaturesRepo;
+    //    private final AppFeaturesRepo appFeaturesRepo;
     private final OutletResponse outletResponse;
     private final Response response;
     private final ErrorResponse errorResponse;
@@ -36,16 +36,17 @@ public class OutletService {
     private String outletPath;
 
     @Autowired
-    public OutletService(S3Util s3Util, ProfileUtility profileUtility, OutletRepo outletRepo, AppFeaturesRepo appFeaturesRepo, OutletResponse outletResponse, Response response, ErrorResponse errorResponse) {
+    public OutletServiceImpl(S3Util s3Util, ProfileUtility profileUtility, OutletRepo outletRepo, OutletResponse outletResponse, Response response, ErrorResponse errorResponse) {
         this.s3Util = s3Util;
         this.profileUtility = profileUtility;
         this.outletRepo = outletRepo;
-        this.appFeaturesRepo = appFeaturesRepo;
         this.outletResponse = outletResponse;
         this.response = response;
         this.errorResponse = errorResponse;
     }
 
+    // Create Outlet
+    @Override
     public ResponseEntity<?> addOutlet(OutletModel outletModel) {
 //        // Check if AppFeatures exists
 //        Optional<AppFeatures> appFeaturesOptional = appFeaturesRepo.findById(1L);
@@ -80,7 +81,6 @@ public class OutletService {
         outlet.setMobileNumber(outletModel.getMobileNumber());
         outlet.setOutletAddress(outletModel.getOutletAddress());
         try {
-            // Save image file here
             String s3Url = s3Util.uploadFile(s3FolderName, outletModel.getOutletImage());
             String fileName = s3Url.substring(s3Url.lastIndexOf("/") + 1);
             // Storing only URI because of frequent change in URL
@@ -104,6 +104,8 @@ public class OutletService {
         return ResponseEntity.ok().body(new Response(HttpStatus.OK.value(), 1, "Outlet added successfully", "MSG17", outletResponse));
     }
 
+    // Fetch Outlet details
+    @Override
     public ResponseEntity<?> getOutletDetails(Long outletId) {
         Optional<Outlet> outletOptional = outletRepo.findById(outletId);
         if (outletOptional.isPresent()) {
@@ -136,6 +138,8 @@ public class OutletService {
         }
     }
 
+    // Fetch all Outlets
+    @Override
     public ResponseEntity<?> getOutletsList() {
         List<Outlet> outlets = outletRepo.findAll();
         outlets.stream().filter(outlet -> outlet.getOutletImgName() != null && outlet.getOutletImgUrl() != null)
@@ -149,22 +153,8 @@ public class OutletService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getOutletPicByName(String outletName) throws IOException {
-        Optional<Outlet> outletOptional = outletRepo.findByOutletName(outletName);
-        if (outletOptional.isPresent()) {
-            Outlet outlet = outletOptional.get();
-            if (outlet.getOutletImgName() != null && outlet.getOutletImgUrl() != null) {
-                return s3Util.getImageFromS3Bucket(s3FolderName, outlet.getOutletImgName());
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, "Image Not Found", "MSG26"));
-            }
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, "Outlet Doesn't exists", "MSG11"));
-        }
-    }
-
-    // Update Outlet Details and image by deleting old one from S3 Bucket
+    // Update Outlet Details and image(deletes old one from S3 bucket)
+    @Override
     public ResponseEntity<?> updateOutlet(Long outletId, OutletModel outletModel) {
         // Check if Outlet exists
         Optional<Outlet> outletOptional = outletRepo.findById(outletId);
@@ -221,6 +211,7 @@ public class OutletService {
     }
 
     // Delete Outlet by Id
+    @Override
     public ResponseEntity<?> deleteOutlet(Long outletId) {
         Optional<Outlet> outletOptional = outletRepo.findById(outletId);
         if (outletOptional.isEmpty()) {
@@ -248,6 +239,23 @@ public class OutletService {
         response.setMessage("Outlet deleted successfully");
         response.setResult(null);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    // Download Outlet Image by Outlet name
+    @Override
+    public ResponseEntity<?> getOutletPicByName(String outletName) throws IOException {
+        Optional<Outlet> outletOptional = outletRepo.findByOutletName(outletName);
+        if (outletOptional.isPresent()) {
+            Outlet outlet = outletOptional.get();
+            if (outlet.getOutletImgName() != null && outlet.getOutletImgUrl() != null) {
+                return s3Util.getImageFromS3Bucket(s3FolderName, outlet.getOutletImgName());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, "Image Not Found", "MSG26"));
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), 0, "Outlet Doesn't exists", "MSG11"));
+        }
     }
 
 }

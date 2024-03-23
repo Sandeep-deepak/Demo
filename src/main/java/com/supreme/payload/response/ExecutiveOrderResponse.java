@@ -13,18 +13,19 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Component
-public class OrderResponse {
-    private Long orderId;
-    private Long distributorId;
+public class ExecutiveOrderResponse {
+
     private Long executiveId;
+    private String executiveName;
+    private ERole role;
     private Long outletId;
+    private String outletName;
+
+    private Long orderId;
     private LocalDateTime dateOfOrder;
-    private List<OrderProductDTO> products;
     private String orderImgName;
     private String orderImgUrl;
     private String orderLongitude;
     private String orderLatitude;
-
-    private ERole role;
-    private String fullName;
+    private List<OrderProductDTO> products;
 }

@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "users")
-public class User {
+public class    User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -44,6 +44,7 @@ public class User {
     @JoinColumn(name = "executiveProfile_id", referencedColumnName = "executive_id")
     @JsonIgnore
     private ExecutiveProfile executiveProfile;
+
 
     public User(String mobileNumber, String pin) {
         this.mobileNumber = mobileNumber;
